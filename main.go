@@ -10,8 +10,11 @@ import (
 	"strconv"
 	"strings"
 
+	"kasir-api/docs"
+
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -37,7 +40,18 @@ func WriteJSON(w http.ResponseWriter, status int, res Response) {
 	json.NewEncoder(w).Encode(res)
 }
 
-// DELETE localhost:8080/api/category/{id}
+// deleteCategory godoc
+// @Summary      Delete a category
+// @Description  Soft delete a category by ID
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Category ID"
+// @Success      200  {object}  Response
+// @Failure      400  {object}  Response
+// @Failure      404  {object}  Response
+// @Failure      500  {object}  Response
+// @Router       /category/{id} [delete]
 func deleteCategory(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	// get id
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/category/")
@@ -90,7 +104,19 @@ func deleteCategory(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	})
 }
 
-// PUT localhost:8080/api/category/{id}
+// updateCategory godoc
+// @Summary      Update a category
+// @Description  Update a category by ID
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Param        id        path      int       true  "Category ID"
+// @Param        category  body      Category  true  "Category Data"
+// @Success      200       {object}  Response{data=Category}
+// @Failure      400       {object}  Response
+// @Failure      404       {object}  Response
+// @Failure      500       {object}  Response
+// @Router       /category/{id} [put]
 func updateCategory(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	// get id dari request
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/category/")
@@ -182,7 +208,18 @@ func updateCategory(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	})
 }
 
-// GET localhost:8080/api/category/{id}
+// getCategoryByID godoc
+// @Summary      Get a category by ID
+// @Description  Get a category by its ID
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Category ID"
+// @Success      200  {object}  Response{data=Category}
+// @Failure      400  {object}  Response
+// @Failure      404  {object}  Response
+// @Failure      500  {object}  Response
+// @Router       /category/{id} [get]
 func getCategoryByID(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	// Parse ID dari URL path
 	// URL: /api/category/123 -> ID = 123
@@ -232,12 +269,25 @@ func getCategoryByID(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	})
 }
 
+// @title           Kasir API
+// @version         1.0
+// @description     This is a sample server for a Cashier System.
+// @BasePath        /api
+
 func main() {
 	// load .env
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Error loading .env file, using system environment variables")
 	}
+
+	portStr := os.Getenv("PORT")
+	if portStr == "" {
+		portStr = "8080"
+	}
+
+	// Dynamic Swagger Host
+	docs.SwaggerInfo.Host = "localhost:" + portStr
 
 	// connect to DB
 	connStr := os.Getenv("DATABASE_URL")
@@ -255,9 +305,7 @@ func main() {
 
 	fmt.Println("Successfully connected to database!")
 
-	fmt.Println("Successfully connected to database!")
-
-	// localhost:8080/health
+	// {{host}}/health
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusOK, Response{
 			Status:  "success",
@@ -265,9 +313,10 @@ func main() {
 		})
 	})
 
-	// GET localhost:8080/api/category/{id}
-	// PUT localhost:8080/api/category/{id}
-	// DELETE localhost:8080/api/category/{id}
+	// Swagger
+	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
+
+	// Routes
 	http.HandleFunc("/api/category/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
@@ -284,81 +333,12 @@ func main() {
 		}
 	})
 
-	// POST localhost:8080/api/category
 	http.HandleFunc("/api/category", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			rows, err := db.Query("SELECT id, name, description, deleted_at FROM category WHERE deleted_at IS NULL")
-			if err != nil {
-				WriteJSON(w, http.StatusInternalServerError, Response{
-					Status:  "failed",
-					Message: "Failed to fetch categories: " + err.Error(),
-				})
-				return
-			}
-			defer rows.Close()
-
-			// Initialize in-memory category slice (temporary storage)
-			var categories []Category
-
-			for rows.Next() {
-				var c Category
-				var deletedAt sql.NullTime
-				if err := rows.Scan(&c.ID, &c.Name, &c.Description, &deletedAt); err != nil {
-					WriteJSON(w, http.StatusInternalServerError, Response{
-						Status:  "failed",
-						Message: "Failed to scan category: " + err.Error(),
-					})
-					return
-				}
-				if deletedAt.Valid {
-					c.DeletedAt = timestamppb.New(deletedAt.Time)
-				}
-				categories = append(categories, c)
-			}
-
-			WriteJSON(w, http.StatusOK, Response{
-				Status:  "success",
-				Message: "Categories retrieved successfully",
-				Data:    categories,
-			})
-
+			getCategories(w, r, db)
 		case "POST":
-			// baca data dari request
-			var categoryBaru Category
-			err := json.NewDecoder(r.Body).Decode(&categoryBaru)
-			if err != nil {
-				WriteJSON(w, http.StatusBadRequest, Response{
-					Status:  "failed",
-					Message: "Invalid request body",
-				})
-				return
-			}
-
-			// simpan ke database
-			var deletedAt sql.NullTime
-			err = db.QueryRow(
-				"INSERT INTO category (name, description) VALUES ($1, $2) RETURNING id, deleted_at",
-				categoryBaru.Name, categoryBaru.Description,
-			).Scan(&categoryBaru.ID, &deletedAt)
-
-			if err != nil {
-				WriteJSON(w, http.StatusInternalServerError, Response{
-					Status:  "failed",
-					Message: "Failed to save category: " + err.Error(),
-				})
-				return
-			}
-
-			if deletedAt.Valid {
-				categoryBaru.DeletedAt = timestamppb.New(deletedAt.Time)
-			}
-
-			WriteJSON(w, http.StatusCreated, Response{
-				Status:  "success",
-				Message: "Category created successfully",
-				Data:    categoryBaru,
-			})
+			createCategory(w, r, db)
 		default:
 			WriteJSON(w, http.StatusMethodNotAllowed, Response{
 				Status:  "failed",
@@ -367,10 +347,102 @@ func main() {
 		}
 	})
 
-	portStr := os.Getenv("PORT")
 	fmt.Println("Server running on http://localhost:" + portStr)
 	err = http.ListenAndServe(":"+portStr, nil)
 	if err != nil {
 		fmt.Println("Error running server:", err)
 	}
+}
+
+// getCategories godoc
+// @Summary      Get all categories
+// @Description  Get a list of all active categories
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  Response{data=[]Category}
+// @Failure      500  {object}  Response
+// @Router       /category [get]
+func getCategories(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	rows, err := db.Query("SELECT id, name, description, deleted_at FROM category WHERE deleted_at IS NULL")
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, Response{
+			Status:  "failed",
+			Message: "Failed to fetch categories: " + err.Error(),
+		})
+		return
+	}
+	defer rows.Close()
+
+	var categories []Category
+	for rows.Next() {
+		var c Category
+		var deletedAt sql.NullTime
+		if err := rows.Scan(&c.ID, &c.Name, &c.Description, &deletedAt); err != nil {
+			WriteJSON(w, http.StatusInternalServerError, Response{
+				Status:  "failed",
+				Message: "Failed to scan category: " + err.Error(),
+			})
+			return
+		}
+		if deletedAt.Valid {
+			c.DeletedAt = timestamppb.New(deletedAt.Time)
+		}
+		categories = append(categories, c)
+	}
+
+	WriteJSON(w, http.StatusOK, Response{
+		Status:  "success",
+		Message: "Categories retrieved successfully",
+		Data:    categories,
+	})
+}
+
+// createCategory godoc
+// @Summary      Create a new category
+// @Description  Create a new category with name and description
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Param        category  body      Category  true  "Category Data"
+// @Success      201       {object}  Response{data=Category}
+// @Failure      400       {object}  Response
+// @Failure      500       {object}  Response
+// @Router       /category [post]
+func createCategory(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	// baca data dari request
+	var categoryBaru Category
+	err := json.NewDecoder(r.Body).Decode(&categoryBaru)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, Response{
+			Status:  "failed",
+			Message: "Invalid request body",
+		})
+		return
+	}
+
+	// simpan ke database
+	var deletedAt sql.NullTime
+	err = db.QueryRow(
+		"INSERT INTO category (name, description) VALUES ($1, $2) RETURNING id, deleted_at",
+		categoryBaru.Name, categoryBaru.Description,
+	).Scan(&categoryBaru.ID, &deletedAt)
+
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, Response{
+			Status:  "failed",
+			Message: "Failed to save category: " + err.Error(),
+		})
+		return
+	}
+
+	if deletedAt.Valid {
+		categoryBaru.DeletedAt = timestamppb.New(deletedAt.Time)
+	}
+
+	WriteJSON(w, http.StatusCreated, Response{
+		Status:  "success",
+		Message: "Category created successfully",
+		Data:    categoryBaru,
+	})
 }
