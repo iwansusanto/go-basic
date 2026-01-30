@@ -27,9 +27,10 @@ func main() {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv() // read value from system env too
 
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Println("Error loading .env file:", err)
+	if err := viper.ReadInConfig(); err != nil {
+		log.Println("No .env file found, using system environment variables")
+	} else {
+		log.Println(".env file loaded successfully")
 	}
 
 	portStr := viper.GetString("PORT")
