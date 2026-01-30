@@ -20,6 +20,17 @@ func NewCategoryHandler(service *services.CategoryService) *CategoryHandler {
 	return &CategoryHandler{Service: service}
 }
 
+// GetCategoryByID godoc
+// @Summary      Get a category by ID
+// @Description  Get a category by its ID
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Category ID"
+// @Success      200  {object}  utils.Response
+// @Failure      400  {object}  utils.Response
+// @Failure      404  {object}  utils.Response
+// @Failure      500  {object}  utils.Response
 // @Router       /category/{id} [get]
 func (h *CategoryHandler) GetCategoryByID(w http.ResponseWriter, r *http.Request) {
 	// Parse ID dari URL path
@@ -58,6 +69,17 @@ func (h *CategoryHandler) GetCategoryByID(w http.ResponseWriter, r *http.Request
 	})
 }
 
+// DeleteCategory godoc
+// @Summary      Delete a category
+// @Description  Soft delete a category by ID
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Category ID"
+// @Success      200  {object}  utils.Response
+// @Failure      400  {object}  utils.Response
+// @Failure      404  {object}  utils.Response
+// @Failure      500  {object}  utils.Response
 // @Router       /category/{id} [delete]
 func (h *CategoryHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 	// get id
@@ -96,6 +118,18 @@ func (h *CategoryHandler) DeleteCategory(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+// UpdateCategory godoc
+// @Summary      Update a category
+// @Description  Update a category by ID
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Param        id        path      int              true  "Category ID"
+// @Param        category  body      models.Category  true  "Category Data"
+// @Success      200       {object}  utils.Response
+// @Failure      400       {object}  utils.Response
+// @Failure      404       {object}  utils.Response
+// @Failure      500       {object}  utils.Response
 // @Router       /category/{id} [put]
 func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 	// get id dari request
@@ -173,6 +207,14 @@ func (h *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+// GetCategories godoc
+// @Summary      Get all categories
+// @Description  Get a list of all active categories
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  utils.Response
+// @Failure      500  {object}  utils.Response
 // @Router       /category [get]
 func (h *CategoryHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := h.Service.GetAll()
@@ -191,6 +233,16 @@ func (h *CategoryHandler) GetCategories(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
+// CreateCategory godoc
+// @Summary      Create a new category
+// @Description  Create a new category with the provided details
+// @Tags         category
+// @Accept       json
+// @Produce      json
+// @Param        category  body      models.Category  true  "Category Data"
+// @Success      201       {object}  utils.Response
+// @Failure      400       {object}  utils.Response
+// @Failure      500       {object}  utils.Response
 // @Router       /category [post]
 func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 	// baca data dari request

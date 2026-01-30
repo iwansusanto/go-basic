@@ -46,7 +46,7 @@ func (r *ProductRepository) GetByID(id int) (models.Product, error) {
 
 	query := `
 		SELECT p.id, p.name, p.price, p.stock, p.category_id, p.deleted_at, 
-		       c.id, c.name, c.description
+		       c.name
 		FROM product p
 		LEFT JOIN category c ON p.category_id = c.id
 		WHERE p.id = $1 AND p.deleted_at IS NULL
