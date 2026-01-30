@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
+	"kasir-api/database"
 	"kasir-api/docs"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/spf13/viper"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -275,13 +275,16 @@ func getCategoryByID(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 // @BasePath        /api
 
 func main() {
-	// load .env
-	err := godotenv.Load()
+	// load .env using viper
+	viper.SetConfigFile(".env")
+	viper.AutomaticEnv() // read value from system env too
+
+	err := viper.ReadInConfig()
 	if err != nil {
-		log.Println("Error loading .env file, using system environment variables")
+		log.Println("Error loading .env file:", err)
 	}
 
-	portStr := os.Getenv("PORT")
+	portStr := viper.GetString("PORT")
 	if portStr == "" {
 		portStr = "8080"
 	}
@@ -290,18 +293,12 @@ func main() {
 	docs.SwaggerInfo.Host = "localhost:" + portStr
 
 	// connect to DB
-	connStr := os.Getenv("DATABASE_URL")
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal("Error opening database connection:", err)
-	}
-	defer db.Close()
-
-	// check connection
-	err = db.Ping()
+	dbConnStr := viper.GetString("DATABASE_URL")
+	db, err := database.Connect(dbConnStr)
 	if err != nil {
 		log.Fatal("Error connecting to database:", err)
 	}
+	defer db.Close()
 
 	fmt.Println("Successfully connected to database!")
 
