@@ -59,7 +59,7 @@ func main() {
 	})
 
 	// Swagger
-	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
+	http.HandleFunc("/", httpSwagger.WrapHandler)
 
 	// Routes
 	http.HandleFunc("/api/category/", func(w http.ResponseWriter, r *http.Request) {
