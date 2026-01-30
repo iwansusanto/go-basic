@@ -9,5 +9,6 @@ type Product struct {
 	Price      int                    `json:"price"`
 	Stock      int                    `json:"stock"`
 	CategoryID int                    `json:"category_id"`
+	Category   *Category              `json:"category,omitempty"`
 	DeletedAt  *timestamppb.Timestamp `json:"deleted_at"`
 }

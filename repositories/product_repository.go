@@ -41,15 +41,27 @@ func (r *ProductRepository) GetAll() ([]models.Product, error) {
 // GetByID retrieves a product by ID
 func (r *ProductRepository) GetByID(id int) (models.Product, error) {
 	var p models.Product
+	var c models.Category
 	var deletedAt sql.NullTime
-	err := r.db.QueryRow(
-		"SELECT id, name, price, stock, category_id, deleted_at FROM product WHERE id = $1 AND deleted_at IS NULL",
-		id,
-	).Scan(&p.ID, &p.Name, &p.Price, &p.Stock, &p.CategoryID, &deletedAt)
+
+	query := `
+		SELECT p.id, p.name, p.price, p.stock, p.category_id, p.deleted_at, 
+		       c.id, c.name, c.description
+		FROM product p
+		LEFT JOIN category c ON p.category_id = c.id
+		WHERE p.id = $1 AND p.deleted_at IS NULL
+	`
+
+	err := r.db.QueryRow(query, id).Scan(
+		&p.ID, &p.Name, &p.Price, &p.Stock, &p.CategoryID, &deletedAt,
+		&c.ID, &c.Name, &c.Description,
+	)
 
 	if err != nil {
 		return models.Product{}, err
 	}
+
+	p.Category = &c
 
 	if deletedAt.Valid {
 		p.DeletedAt = timestamppb.New(deletedAt.Time)

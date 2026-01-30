@@ -109,6 +109,44 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/api/product/", func(w http.ResponseWriter, r *http.Request) {
+		productRepo := repositories.NewProductRepository(db)
+		productService := services.NewProductService(productRepo)
+		productHandler := handlers.NewProductHandler(productService)
+
+		switch r.Method {
+		case "GET":
+			productHandler.GetProductByID(w, r)
+		case "PUT":
+			productHandler.UpdateProduct(w, r)
+		case "DELETE":
+			productHandler.DeleteProduct(w, r)
+		default:
+			utils.WriteJSON(w, http.StatusMethodNotAllowed, utils.Response{
+				Status:  "failed",
+				Message: "Method not allowed",
+			})
+		}
+	})
+
+	http.HandleFunc("/api/product", func(w http.ResponseWriter, r *http.Request) {
+		productRepo := repositories.NewProductRepository(db)
+		productService := services.NewProductService(productRepo)
+		productHandler := handlers.NewProductHandler(productService)
+
+		switch r.Method {
+		case "GET":
+			productHandler.GetProducts(w, r)
+		case "POST":
+			productHandler.CreateProduct(w, r)
+		default:
+			utils.WriteJSON(w, http.StatusMethodNotAllowed, utils.Response{
+				Status:  "failed",
+				Message: "Method not allowed",
+			})
+		}
+	})
+
 	fmt.Println("Server running on http://localhost:" + portStr)
 	err = http.ListenAndServe(":"+portStr, nil)
 	if err != nil {
