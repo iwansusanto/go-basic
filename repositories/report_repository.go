@@ -3,7 +3,6 @@ package repositories
 import (
 	"database/sql"
 	"kasir-api/models"
-	"time"
 )
 
 type ReportRepository struct {
@@ -16,7 +15,13 @@ func NewReportRepository(db *sql.DB) *ReportRepository {
 
 // GetDailySalesReport retrieves sales report for today
 func (r *ReportRepository) GetDailySalesReport() (*models.SalesReport, error) {
-	today := time.Now().Format("2006-01-02")
+	// Get current date from database (which is already in Asia/Jakarta timezone)
+	var today string
+	err := r.db.QueryRow("SELECT CURRENT_DATE::text").Scan(&today)
+	if err != nil {
+		return nil, err
+	}
+
 	startOfDay := today + " 00:00:00"
 	endOfDay := today + " 23:59:59"
 
